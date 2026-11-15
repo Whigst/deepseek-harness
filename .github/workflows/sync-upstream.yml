@@ -1,0 +1,37 @@
+name: Sync upstream
+
+on:
+  schedule:
+    # XX: 每天北京时间 09:17 检查源仓库更新，避开整点高峰。
+    - cron: '17 1 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'Whigst/deepseek-harness'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Merge upstream into master
+        env:
+          # XX: 上游工作流文件发生变化时，使用仅授权此仓库且有 Contents/Workflows 写权限的专用令牌。
+          GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN || github.token }}
+          GH_REPO: ${{ github.repository }}
+          TARGET_BRANCH: master
+        shell: bash
+        run: |
+          set -euo pipefail
+          # XX: 原生同步接口保留 fork 的提交；合并冲突会失败，不覆盖分支历史。
+          if ! gh api --method POST "repos/$GH_REPO/merge-upstream" \
+            -f branch="$TARGET_BRANCH" \
+            --jq '.message' >> "$GITHUB_STEP_SUMMARY"; then
+            echo '::error::Upstream sync failed. Resolve merge conflicts or branch restrictions. For upstream workflow changes, set UPSTREAM_SYNC_TOKEN with Contents and Workflows write access to this repository.'
+            exit 1
+          fi
