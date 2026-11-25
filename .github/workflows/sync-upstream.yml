@@ -1,9 +1,7 @@
 name: Sync upstream
 
 on:
-  schedule:
-    # XX: 每天北京时间 09:17 检查源仓库更新，避开整点高峰。
-    - cron: '17 1 * * *'
+  # XX: 补齐上游工作流的写权限前暂停定时；配置 UPSTREAM_SYNC_TOKEN 后恢复每日 09:17。
   workflow_dispatch:
 
 permissions:
